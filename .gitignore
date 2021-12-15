@@ -1,0 +1,8 @@
+/node_modules/
+/build/
+/dist/
+/doc/
+/.gh-pages.git/
+/deploy.sh
+/publish.sh
+/.idea
