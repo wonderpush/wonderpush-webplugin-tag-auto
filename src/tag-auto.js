@@ -30,14 +30,15 @@
       const minViews = options.minViews;
       const maxViews = options.maxViews;
       const maxViewAge = options.maxViewAge;
-      const maxTimeInterval = options.maxTimeInterval;
       const ageMidWeight = options.ageMidWeight || 2592000000;
       const tagPrefix = options.tagPrefix || "topic:";
 
       const isCandidateUrl = url => {
-        if (!whitelist && !blacklist) {
+        if (blacklist.length === 0 && whitelist.length === 0) {
           return true;
-        } else {
+        }
+
+        if (blacklist.length !== 0) {
           for (let i = 0; i < blacklist.length; i++) {
             const regex = new RegExp(blacklist[i]);
 
@@ -46,6 +47,12 @@
             }
           }
 
+          if (whitelist.length === 0) {
+            return true;
+          }
+        }
+
+        if (whitelist.length !== 0) {
           for (let j = 0; j < whitelist.length; j++) {
             const regex = new RegExp(whitelist[j]);
 
@@ -53,66 +60,62 @@
               return true;
             }
           }
-
-          return false;
         }
+
+        return false;
       };
 
-      const setCategoryOnLocalStorage = url => {
-        const candidateCategory = url.split("/")[urlPosition + 1]; // index 0 : empty string
-
-        if (!localStorage.wptags) {
-          localStorage.setItem("wptags", JSON.stringify({}));
-        }
+      const setCategoryOnLocalStorage = async (href, hostname, pathname) => {
+        const candidateCategory = urlPosition === 0 ? hostname : pathname.split("/")[urlPosition + 1]; // index 0 : empty string
 
         // Store viewed categories in the localstorage
-        if (isCandidateUrl(url) && candidateCategory) {
-          let wpTags = JSON.parse(localStorage.wptags);
+        if (isCandidateUrl(href) && candidateCategory) {
+          let viewsByCategory = {};
+          let indexedData = await WonderPushSDK.Storage.get("viewsByCategory");
+
+          if (indexedData.viewsByCategory !== undefined) {
+            viewsByCategory = indexedData.viewsByCategory;
+          }
+
           const currentTimestamp = new Date().getTime();
 
-          wpTags[candidateCategory] ? wpTags[candidateCategory].push(currentTimestamp) : (wpTags[candidateCategory] = [currentTimestamp]);
+          Object.keys(viewsByCategory).includes(candidateCategory)
+            ? viewsByCategory[candidateCategory].push(currentTimestamp)
+            : (viewsByCategory[candidateCategory] = [currentTimestamp]);
 
           if (maxViewAge) {
-            wpTags[candidateCategory].filter(viewsTimestamp => viewsTimestamp >= maxViewAge);
+            viewsByCategory[candidateCategory].filter(viewsTimestamp => viewsTimestamp >= currentTimestamp - maxViewAge);
           }
 
           // keep the n most recent elements defined by maxViews
-          wpTags[candidateCategory].length > maxViews &&
-            wpTags[candidateCategory].sort((a, b) => a - b).splice(0, wpTags[candidateCategory].length - maxViews);
+          viewsByCategory[candidateCategory].length > maxViews &&
+            viewsByCategory[candidateCategory].sort((a, b) => a - b).splice(0, viewsByCategory[candidateCategory].length - maxViews);
 
-          localStorage.wptags = JSON.stringify(wpTags);
+          await WonderPushSDK.Storage.set("viewsByCategory", viewsByCategory);
         }
       };
 
-      const getFavoriteCategories = () => {
+      const getFavoriteCategories = async () => {
+        let viewsByCategory = {};
+        let indexedData = await WonderPushSDK.Storage.get("viewsByCategory");
+
+        if (indexedData.viewsByCategory !== undefined) {
+          viewsByCategory = indexedData.viewsByCategory;
+        }
+
         const ratingCategories = {};
-        const wpTags = JSON.parse(localStorage.wptags);
-        const categories = Object.keys(wpTags);
+        const categories = Object.keys(viewsByCategory);
 
         categories.forEach(category => {
-          const viewsTimestamp = wpTags[category].sort((a, b) => a - b);
+          const viewsTimestamp = viewsByCategory[category].sort((a, b) => a - b);
 
           if (viewsTimestamp.length >= minViews) {
-            if (maxTimeInterval) {
-              const oldestTimestamp = viewsTimestamp[0];
-              const mostRecentTimestamp = viewsTimestamp[viewsTimestamp.length - 1];
+            let rate = 0;
 
-              if (mostRecentTimestamp - oldestTimestamp <= maxTimeInterval) {
-                let rate = 0;
+            // calculate the score of each category
+            viewsTimestamp.forEach(timestamp => (rate += Math.exp((-Math.LN2 * (new Date().getTime() - timestamp)) / ageMidWeight)));
 
-                // calculate the score of each category
-                viewsTimestamp.forEach(timestamp => (rate += Math.exp((-Math.LN2 * (new Date().getTime() - timestamp)) / ageMidWeight)));
-
-                ratingCategories[category] = rate;
-              }
-            } else {
-              let rate = 0;
-
-              // calculate the score of each category
-              viewsTimestamp.forEach(timestamp => (rate += Math.exp((-Math.LN2 * (new Date().getTime() - timestamp)) / ageMidWeight)));
-
-              ratingCategories[category] = rate;
-            }
+            ratingCategories[category] = rate;
           }
         });
 
@@ -128,23 +131,31 @@
       };
 
       const handleWonderPushTags = async () => {
-        const favoriteCategories = getFavoriteCategories();
+        const favoriteCategories = await getFavoriteCategories();
 
         const wonderPushTags = await WonderPush.getTags();
 
         // handle old tags
-        wonderPushTags.forEach(async tag => {
-          !favoriteCategories.includes(tag.split(tagPrefix)[1]) && (await WonderPush.removeTag(tag));
-        });
+        for (let tag of wonderPushTags) {
+          if (tag.startsWith(tagPrefix)) {
+            !favoriteCategories.includes(tag.substring(tagPrefix.length)) && (await WonderPush.removeTag(tag));
+          }
+        }
 
         // handle new tags
         favoriteCategories.forEach(async category => {
           !wonderPushTags.includes(tagPrefix + category) && (await WonderPush.addTag(tagPrefix + category));
         });
+
+        console.log(await WonderPush.getTags());
       };
 
       const handleAutotag = async () => {
-        setCategoryOnLocalStorage(window.location.pathname);
+        const href = window.location.href; // * https://wp.la440.com/2021/12/03/uncategorized/hello-world/
+        const hostname = window.location.hostname; // * wp.la440.com
+        const pathname = window.location.pathname; // * /2021/12/03/uncategorized/hello-world/
+
+        await setCategoryOnLocalStorage(href, hostname, pathname);
         await handleWonderPushTags();
       };
 
