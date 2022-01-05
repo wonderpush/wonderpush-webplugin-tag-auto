@@ -34,10 +34,6 @@
       const tagPrefix = options.tagPrefix || "topic:";
 
       const isCandidateUrl = url => {
-        if (blacklist.length === 0 && whitelist.length === 0) {
-          return true;
-        }
-
         if (blacklist.length !== 0) {
           for (let i = 0; i < blacklist.length; i++) {
             const regex = new RegExp(blacklist[i]);
@@ -60,9 +56,9 @@
               return true;
             }
           }
+          return false;
         }
-
-        return false;
+        return true;
       };
 
       const setCategoryOnLocalStorage = async (href, hostname, pathname) => {
