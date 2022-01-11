@@ -62,7 +62,7 @@
       };
 
       const setCategoryOnLocalStorage = async (href, hostname, pathname) => {
-        const candidateCategory = urlPosition === 0 ? hostname : pathname.split("/")[urlPosition + 1]; // index 0 : empty string
+        const candidateCategory = urlPosition === 0 ? hostname : pathname.split("/")[urlPosition]; // index 0 : empty string
 
         // Store viewed categories in the localstorage
         if (isCandidateUrl(href) && candidateCategory) {
