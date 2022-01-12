@@ -26,7 +26,7 @@
       const whitelist = options.whitelist || [];
       const blacklist = options.blacklist || [];
       const urlPosition = options.urlPosition || 1;
-      const numFavoriteCategories = options.numFavoriteCategories || 1;
+      const numTopics = options.numTopics || 1;
       const minViews = Math.max(2, options.minViews || 3);
       const maxViews = options.maxViews;
       const maxViewAge = options.maxViewAge;
@@ -122,11 +122,11 @@
           }
         });
 
-        // keep the n favorite categories defined by numFavoriteCategories
+        // keep the n favorite categories defined by numTopics
         const favoriteCategories = Object.entries(ratingCategories) // {a: 0, c: 2, b: 1} => [[a, 0], [c, 2], [b, 1]]
           .sort((a, b) => b[1] - a[1]) // => [[c, 2], [b, 1], [a, 0]]
           .map(category => category[0]) // => [c, b, a]
-          .slice(0, numFavoriteCategories);
+          .slice(0, numTopics);
 
         // FIXME: don't check me in
         // console.log("getFavoriteCategories", favoriteCategories);
