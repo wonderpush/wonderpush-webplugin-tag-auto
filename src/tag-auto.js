@@ -16,11 +16,11 @@
    * @external WonderPushPluginSDK
    * @see {@link https://wonderpush.github.io/wonderpush-javascript-sdk/latest/WonderPushPluginSDK.html|WonderPush JavaScript Plugin SDK reference}
    */
-  WonderPush.registerPlugin("autotag", {
+  WonderPush.registerPlugin("tag-auto", {
     window: function (WonderPushSDK, options) {
-      window.WonderPush = window.WonderPush || [];
       options = options || {};
 
+      // FIXME: don't check me in
       console.log("autotag installed with options", options);
 
       const whitelist = options.whitelist || [];
@@ -62,6 +62,10 @@
       };
 
       const setCategoryOnLocalStorage = async (href, hostname, pathname) => {
+
+        // FIXME: don't check me in
+        // console.log('setCategoryOnLocalStorage', href, hostname, pathname);
+
         const candidateCategory = urlPosition === 0 ? hostname : pathname.split("/")[urlPosition]; // index 0 : empty string
 
         // Store viewed categories in the localstorage
@@ -86,6 +90,9 @@
           // keep the n most recent elements defined by maxViews
           viewsByCategory[candidateCategory].length > maxViews &&
             viewsByCategory[candidateCategory].sort((a, b) => a - b).splice(0, viewsByCategory[candidateCategory].length - maxViews);
+
+          // FIXME: don't check me in
+          // console.log('viewsByCategory', viewsByCategory, 'candidateCategory', candidateCategory);
 
           await WonderPushSDK.Storage.set("viewsByCategory", viewsByCategory);
         }
@@ -115,13 +122,14 @@
           }
         });
 
-        console.log("ratingCategories :", ratingCategories);
-
         // keep the n favorite categories defined by numFavoriteCategories
         const favoriteCategories = Object.entries(ratingCategories) // {a: 0, c: 2, b: 1} => [[a, 0], [c, 2], [b, 1]]
           .sort((a, b) => b[1] - a[1]) // => [[c, 2], [b, 1], [a, 0]]
           .map(category => category[0]) // => [c, b, a]
           .slice(0, numFavoriteCategories);
+
+        // FIXME: don't check me in
+        // console.log("getFavoriteCategories", favoriteCategories);
 
         return favoriteCategories;
       };
@@ -143,10 +151,15 @@
           !wonderPushTags.includes(tagPrefix + category) && (await WonderPush.addTag(tagPrefix + category));
         });
 
-        console.log(await WonderPush.getTags());
+        // FIXME: don't check me in
+        // console.log('handleWonderPushTags', await WonderPush.getTags());
       };
 
       const handleAutotag = async () => {
+
+        // FIXME: don't check me in
+        // console.log('handleAutotag');
+
         const href = window.location.href; // * https://wp.la440.com/2021/12/03/uncategorized/hello-world/
         const hostname = window.location.hostname; // * wp.la440.com
         const pathname = window.location.pathname; // * /2021/12/03/uncategorized/hello-world/
@@ -164,7 +177,11 @@
       }, 1000);
 
       // ! Listen to the end of window loading
-      window.addEventListener("load", handleAutotag());
+      if (window.document.readyState === 'complete') {
+        handleAutotag();
+      } else {
+        window.addEventListener("load", handleAutotag());
+      }
     }
   });
 })();
