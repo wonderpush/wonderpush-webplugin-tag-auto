@@ -61,14 +61,14 @@
         return true;
       };
 
-      const setCategoryOnLocalStorage = async (href, hostname, pathname) => {
+      const setTopicOnLocalStorage = async (href, hostname, pathname) => {
 
         // FIXME: don't check me in
-        // console.log('setCategoryOnLocalStorage', href, hostname, pathname);
+        // console.log('setTopicOnLocalStorage', href, hostname, pathname);
 
-        let candidateCategory;
+        let candidateTopic;
         if (urlPosition === 0) {
-          candidateCategory = hostname;
+          candidateTopic = hostname;
         } else {
           const tokens = pathname.split('/');
           while (tokens.length > 0 && !tokens[tokens.length - 1]) {
@@ -77,107 +77,107 @@
 
           if (urlPosition === tokens.length - 1) {
             // Not allowing the last token
-            candidateCategory = undefined;
+            candidateTopic = undefined;
           } else if (urlPosition < tokens.length - 1) {
             const val = tokens[urlPosition];
             if (val.match(/^[0-9]+\.html$/)) {
               // Not allowing numeric values followed by .html
-              candidateCategory = undefined;
+              candidateTopic = undefined;
             } else if (val.match(/^[0-9]+$/)) {
               // Not allowing numeric values
-              candidateCategory = undefined;
+              candidateTopic = undefined;
             } else if (val.length > 50) {
               // Not allowing values larger than 50 chars
-              candidateCategory = undefined;
+              candidateTopic = undefined;
             } else {
-              candidateCategory = val;
+              candidateTopic = val;
             }
           } else {
-            candidateCategory = undefined;
+            candidateTopic = undefined;
           }
         }
 
-        // Store viewed categories in the localstorage
-        if (isCandidateUrl(href) && candidateCategory) {
-          let viewsByCategory = {};
-          let indexedData = await WonderPushSDK.Storage.get("viewsByCategory");
+        // Store viewed topics in the localstorage
+        if (isCandidateUrl(href) && candidateTopic) {
+          let viewsByTopic = {};
+          let indexedData = await WonderPushSDK.Storage.get("viewsByTopic");
 
-          if (indexedData.viewsByCategory !== undefined) {
-            viewsByCategory = indexedData.viewsByCategory;
+          if (indexedData.viewsByTopic !== undefined) {
+            viewsByTopic = indexedData.viewsByTopic;
           }
 
           const currentTimestamp = new Date().getTime();
 
-          Object.keys(viewsByCategory).includes(candidateCategory)
-            ? viewsByCategory[candidateCategory].push(currentTimestamp)
-            : (viewsByCategory[candidateCategory] = [currentTimestamp]);
+          Object.keys(viewsByTopic).includes(candidateTopic)
+            ? viewsByTopic[candidateTopic].push(currentTimestamp)
+            : (viewsByTopic[candidateTopic] = [currentTimestamp]);
 
           if (maxViewAge) {
-            viewsByCategory[candidateCategory].filter(viewsTimestamp => viewsTimestamp >= currentTimestamp - maxViewAge);
+            viewsByTopic[candidateTopic].filter(viewsTimestamp => viewsTimestamp >= currentTimestamp - maxViewAge);
           }
 
           // keep the n most recent elements defined by maxViews
-          viewsByCategory[candidateCategory].length > maxViews &&
-            viewsByCategory[candidateCategory].sort((a, b) => a - b).splice(0, viewsByCategory[candidateCategory].length - maxViews);
+          viewsByTopic[candidateTopic].length > maxViews &&
+            viewsByTopic[candidateTopic].sort((a, b) => a - b).splice(0, viewsByTopic[candidateTopic].length - maxViews);
 
           // FIXME: don't check me in
-          // console.log('viewsByCategory', viewsByCategory, 'candidateCategory', candidateCategory);
+          // console.log('viewsByTopic', viewsByTopic, 'candidateTopic', candidateTopic);
 
-          await WonderPushSDK.Storage.set("viewsByCategory", viewsByCategory);
+          await WonderPushSDK.Storage.set("viewsByTopic", viewsByTopic);
         }
       };
 
-      const getFavoriteCategories = async () => {
-        let viewsByCategory = {};
-        let indexedData = await WonderPushSDK.Storage.get("viewsByCategory");
+      const getFavoriteTopics = async () => {
+        let viewsByTopic = {};
+        let indexedData = await WonderPushSDK.Storage.get("viewsByTopic");
 
-        if (indexedData.viewsByCategory !== undefined) {
-          viewsByCategory = indexedData.viewsByCategory;
+        if (indexedData.viewsByTopic !== undefined) {
+          viewsByTopic = indexedData.viewsByTopic;
         }
 
-        const ratingCategories = {};
-        const categories = Object.keys(viewsByCategory);
+        const ratingTopics = {};
+        const topics = Object.keys(viewsByTopic);
 
-        categories.forEach(category => {
-          const viewsTimestamp = viewsByCategory[category].sort((a, b) => a - b);
+        topics.forEach(topic => {
+          const viewsTimestamp = viewsByTopic[topic].sort((a, b) => a - b);
 
           if (viewsTimestamp.length >= minViews) {
             let rate = 0;
 
-            // calculate the score of each category
+            // calculate the score of each topic
             viewsTimestamp.forEach(timestamp => (rate += Math.exp((-Math.LN2 * (new Date().getTime() - timestamp)) / ageMidWeight)));
 
-            ratingCategories[category] = rate;
+            ratingTopics[topic] = rate;
           }
         });
 
-        // keep the n favorite categories defined by numTopics
-        const favoriteCategories = Object.entries(ratingCategories) // {a: 0, c: 2, b: 1} => [[a, 0], [c, 2], [b, 1]]
+        // keep the n favorite topics defined by numTopics
+        const favoriteTopics = Object.entries(ratingTopics) // {a: 0, c: 2, b: 1} => [[a, 0], [c, 2], [b, 1]]
           .sort((a, b) => b[1] - a[1]) // => [[c, 2], [b, 1], [a, 0]]
-          .map(category => category[0]) // => [c, b, a]
+          .map(topic => topic[0]) // => [c, b, a]
           .slice(0, numTopics);
 
         // FIXME: don't check me in
-        // console.log("getFavoriteCategories", favoriteCategories);
+        // console.log("getFavoriteTopics", favoriteTopics);
 
-        return favoriteCategories;
+        return favoriteTopics;
       };
 
       const handleWonderPushTags = async () => {
-        const favoriteCategories = await getFavoriteCategories();
+        const favoriteTopics = await getFavoriteTopics();
 
         const wonderPushTags = await WonderPush.getTags();
 
         // handle old tags
         for (let tag of wonderPushTags) {
           if (tag.startsWith(tagPrefix)) {
-            !favoriteCategories.includes(tag.substring(tagPrefix.length)) && (await WonderPush.removeTag(tag));
+            !favoriteTopics.includes(tag.substring(tagPrefix.length)) && (await WonderPush.removeTag(tag));
           }
         }
 
         // handle new tags
-        favoriteCategories.forEach(async category => {
-          !wonderPushTags.includes(tagPrefix + category) && (await WonderPush.addTag(tagPrefix + category));
+        favoriteTopics.forEach(async topic => {
+          !wonderPushTags.includes(tagPrefix + topic) && (await WonderPush.addTag(tagPrefix + topic));
         });
 
         // FIXME: don't check me in
@@ -193,7 +193,7 @@
         const hostname = window.location.hostname; // * wp.la440.com
         const pathname = window.location.pathname; // * /2021/12/03/uncategorized/hello-world/
 
-        await setCategoryOnLocalStorage(href, hostname, pathname);
+        await setTopicOnLocalStorage(href, hostname, pathname);
         await handleWonderPushTags();
       };
 
