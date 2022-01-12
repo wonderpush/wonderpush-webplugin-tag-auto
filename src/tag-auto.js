@@ -66,7 +66,36 @@
         // FIXME: don't check me in
         // console.log('setCategoryOnLocalStorage', href, hostname, pathname);
 
-        const candidateCategory = urlPosition === 0 ? hostname : pathname.split("/")[urlPosition]; // index 0 : empty string
+        let candidateCategory;
+        if (urlPosition === 0) {
+          candidateCategory = hostname;
+        } else {
+          const tokens = pathname.split('/');
+          while (tokens.length > 0 && !tokens[tokens.length - 1]) {
+            tokens.splice(tokens.length - 1, 1);
+          }
+
+          if (urlPosition === tokens.length - 1) {
+            // Not allowing the last token
+            candidateCategory = undefined;
+          } else if (urlPosition < tokens.length - 1) {
+            const val = tokens[urlPosition];
+            if (val.match(/^[0-9]+\.html$/)) {
+              // Not allowing numeric values followed by .html
+              candidateCategory = undefined;
+            } else if (val.match(/^[0-9]+$/)) {
+              // Not allowing numeric values
+              candidateCategory = undefined;
+            } else if (val.length > 50) {
+              // Not allowing values larger than 50 chars
+              candidateCategory = undefined;
+            } else {
+              candidateCategory = val;
+            }
+          } else {
+            candidateCategory = undefined;
+          }
+        }
 
         // Store viewed categories in the localstorage
         if (isCandidateUrl(href) && candidateCategory) {
