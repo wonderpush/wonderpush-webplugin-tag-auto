@@ -25,9 +25,9 @@
 
       const whitelist = options.whitelist || [];
       const blacklist = options.blacklist || [];
-      const urlPosition = options.urlPosition || 0;
+      const urlPosition = options.urlPosition || 1;
       const numFavoriteCategories = options.numFavoriteCategories || 1;
-      const minViews = options.minViews;
+      const minViews = Math.max(2, options.minViews || 3);
       const maxViews = options.maxViews;
       const maxViewAge = options.maxViewAge;
       const ageMidWeight = options.ageMidWeight || 2592000000;
