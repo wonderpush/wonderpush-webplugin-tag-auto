@@ -21,7 +21,7 @@
       options = options || {};
 
       // FIXME: don't check me in
-      console.log("autotag installed with options", options);
+      // console.log("autotag installed with options", options);
 
       const whitelist = options.whitelist || [];
       const blacklist = options.blacklist || [];
