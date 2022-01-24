@@ -1,15 +1,20 @@
 (function () {
   /**
    * WonderPush E-commerce plugin
-   * @class Ecommerce
+   * @class Autotag
    * @param {external:WonderPushPluginSDK} WonderPushSDK - The WonderPush SDK instance provided automatically on intanciation.
-   * @param {Ecommerce.Options} options - The plugin options.
+   * @param {Autotag.Options} options - The plugin options.
    */
   /**
-   * @typedef {Object} Ecommerce.Options
-   * @property {string} [thankYouPageUrl] - A pattern contained the URL of your thank-you page, no wildcards. Be careful not to match other pages.
-   * @property {string} [addToCartButtonQuerySelector] - A query selector that matches your add-to-cart button(s) with document.querySelectorAll. See https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelectorAll
-   * @property {string} [removeFromCartButtonQuerySelector] - A query selector that matches your remove-from or empty cart button(s) with document.querySelectorAll. See https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelectorAll
+   * @typedef {Object} Autotag.Options
+   * @property {array} [whitelist] - An array of strings. When not empty, the current location URL must match at least one of these strings for the view to be counted.
+   * @property {array} [blacklist] - An array of strings. The current location URL must not match any of these strings for the view to be counted.
+   * @property {number} [urlPosition] - The number of '/' in the path of the URL preceding the keyword. Use 0 for the hostname. Defaults to 1.
+   * @property {number} [numTopics] - Max number of topics. Defaults to 1.
+   * @property {number} [minViews] - Minimum number of views for a topic. Defaults to 3, minimum 2.
+   * @property {number} [maxViews] - Maximum number of views taken into account for a topic. Leave empty for no maximum, which is the default.
+   * @property {number} [maxViewAge] - Number of milliseconds after which the view is not counted anymore. Leave empty for no max age, which is the default.
+   * @property {string} [tagPrefix] - The prefix added to tags. Defaults to "topic:".
    */
   /**
    * The WonderPush JavaScript SDK instance.
