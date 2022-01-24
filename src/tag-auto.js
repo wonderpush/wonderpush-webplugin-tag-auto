@@ -122,8 +122,9 @@
           }
 
           // keep the n most recent elements defined by maxViews
-          viewsByTopic[candidateTopic].length > maxViews &&
+          if (viewsByTopic[candidateTopic].length > maxViews) {
             viewsByTopic[candidateTopic].sort((a, b) => a - b).splice(0, viewsByTopic[candidateTopic].length - maxViews);
+          }
 
           // FIXME: don't check me in
           // console.log('viewsByTopic', viewsByTopic, 'candidateTopic', candidateTopic);
