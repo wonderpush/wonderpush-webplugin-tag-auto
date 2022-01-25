@@ -71,64 +71,55 @@
         // FIXME: don't check me in
         // console.log('setTopicOnLocalStorage', href, hostname, pathname);
 
-        let candidateTopic;
+        const candidateTopics = [];
         if (urlPosition === 0) {
-          candidateTopic = hostname;
+          candidateTopics.push(hostname);
         } else {
           const tokens = pathname.split('/');
           while (tokens.length > 0 && !tokens[tokens.length - 1]) {
             tokens.splice(tokens.length - 1, 1);
           }
 
-          if (urlPosition === tokens.length - 1) {
-            // Not allowing the last token
-            candidateTopic = undefined;
-          } else if (urlPosition < tokens.length - 1) {
+          // Not allowing the last token
+          if (urlPosition < tokens.length - 1) {
             const val = tokens[urlPosition];
-            if (val.match(/^[0-9]+\.html$/)) {
-              // Not allowing numeric values followed by .html
-              candidateTopic = undefined;
-            } else if (val.match(/^[0-9]+$/)) {
-              // Not allowing numeric values
-              candidateTopic = undefined;
-            } else if (val.length > 50) {
-              // Not allowing values larger than 50 chars
-              candidateTopic = undefined;
-            } else {
-              candidateTopic = val;
+            if (!val.match(/^[0-9]+\.html$/) && // Not allowing numeric values followed by .html
+              !val.match(/^[0-9]+$/) && // Not allowing numeric values
+              val.length <= 50 // Not allowing values larger than 50 chars
+            ) {
+              candidateTopics.push(val);
             }
-          } else {
-            candidateTopic = undefined;
           }
         }
 
         // Store viewed topics in the localstorage
-        if (isCandidateUrl(href) && candidateTopic) {
+        if (isCandidateUrl(href) && candidateTopics.length) {
           let viewsByTopic = {};
           let indexedData = await WonderPushSDK.Storage.get("viewsByTopic");
-
           if (indexedData.viewsByTopic !== undefined) {
             viewsByTopic = indexedData.viewsByTopic;
           }
-
           const currentTimestamp = new Date().getTime();
+          candidateTopics.forEach((candidateTopic) => {
+            // Store the view's timestamp
+            if (Object.keys(viewsByTopic).includes(candidateTopic)) {
+              viewsByTopic[candidateTopic].push(currentTimestamp);
+            } else {
+              viewsByTopic[candidateTopic] = [currentTimestamp];
+            }
 
-          Object.keys(viewsByTopic).includes(candidateTopic)
-            ? viewsByTopic[candidateTopic].push(currentTimestamp)
-            : (viewsByTopic[candidateTopic] = [currentTimestamp]);
+            // Eliminate views that are too old
+            if (maxViewAge) {
+              viewsByTopic[candidateTopic].filter(viewsTimestamp => viewsTimestamp >= currentTimestamp - maxViewAge);
+            }
 
-          if (maxViewAge) {
-            viewsByTopic[candidateTopic].filter(viewsTimestamp => viewsTimestamp >= currentTimestamp - maxViewAge);
-          }
-
-          // keep the n most recent elements defined by maxViews
-          if (viewsByTopic[candidateTopic].length > maxViews) {
-            viewsByTopic[candidateTopic].sort((a, b) => a - b).splice(0, viewsByTopic[candidateTopic].length - maxViews);
-          }
-
+            // keep the n most recent elements defined by maxViews
+            if (viewsByTopic[candidateTopic].length > maxViews) {
+              viewsByTopic[candidateTopic].sort((a, b) => a - b).splice(0, viewsByTopic[candidateTopic].length - maxViews);
+            }
+          });
           // FIXME: don't check me in
-          // console.log('viewsByTopic', viewsByTopic, 'candidateTopic', candidateTopic);
-
+          // console.log('viewsByTopic', viewsByTopic, 'candidateTopics', candidateTopics);
           await WonderPushSDK.Storage.set("viewsByTopic", viewsByTopic);
         }
       };
@@ -177,13 +168,17 @@
         // handle old tags
         for (let tag of wonderPushTags) {
           if (tag.startsWith(tagPrefix)) {
-            !favoriteTopics.includes(tag.substring(tagPrefix.length)) && (await WonderPush.removeTag(tag));
+            if (!favoriteTopics.includes(tag.substring(tagPrefix.length))) {
+              await WonderPush.removeTag(tag);
+            }
           }
         }
 
         // handle new tags
-        favoriteTopics.forEach(async topic => {
-          !wonderPushTags.includes(tagPrefix + topic) && (await WonderPush.addTag(tagPrefix + topic));
+        favoriteTopics.forEach(topic => {
+          if (!wonderPushTags.includes(tagPrefix + topic)) {
+            WonderPush.addTag(tagPrefix + topic);
+          }
         });
 
         // FIXME: don't check me in
