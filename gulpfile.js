@@ -204,10 +204,23 @@ gulp.task('doc-prepare-publish', gulp.series('clean', 'doc', 'doc-prepare-publis
 gulp.task('dist-js', gulp.series('minify-css', 'minify-less', 'minify-sass', 'copy-res', function() {
     return gulp.src(JS_GLOB)
         .pipe(plumber())
-        .pipe(jshint({supernew: true}))
+        .pipe(jshint({supernew: true, esversion: 8}))
         .pipe(jshint.reporter())
         .pipe(sourcemaps.init())
         .pipe(babel({
+            presets: [
+              [
+                "@babel/preset-env",
+                {
+                  "useBuiltIns": "entry",
+                  // "modules": false,
+                  "corejs": "3",
+                  targets: {
+                    esmodules: true,
+                  }
+                }
+              ]
+            ],
             plugins: [
                 function({types: t}) {
                     return {
