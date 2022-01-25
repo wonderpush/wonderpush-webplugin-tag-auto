@@ -7,6 +7,7 @@
    */
   /**
    * @typedef {Object} Autotag.Options
+   * @property {array} [topicList] - An array of strings to search in the URL in order to find topics. When not empty, the urlPosition is ignored.
    * @property {array} [whitelist] - An array of strings. When not empty, the current location URL must match at least one of these strings for the view to be counted.
    * @property {array} [blacklist] - An array of strings. The current location URL must not match any of these strings for the view to be counted.
    * @property {number} [urlPosition] - The number of '/' in the path of the URL preceding the keyword. Use 0 for the hostname. Defaults to 1.
@@ -37,11 +38,21 @@
       const maxViewAge = options.maxViewAge;
       const ageMidWeight = options.ageMidWeight || 2592000000;
       const tagPrefix = options.tagPrefix || "topic:";
+      const topicList = Array.from(new Set(options.topicList || []));
+      const escapeRegExp = (s) => (s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const regExpFromTopic = (topic) => {
+        const escapedTopic = escapeRegExp(topic);
+        // Match escaped topics surrounded by non alphanum characters or nothing
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions/Assertions#other_assertions
+        return new RegExp('(?<![a-z0-9])' + escapedTopic + '(?![a-z0-9])', 'i');
+      };
+      const topicRegexps = {};
+      topicList.forEach(x => topicRegexps[x] = regExpFromTopic(x));
 
       const isCandidateUrl = url => {
         if (blacklist.length !== 0) {
           for (let i = 0; i < blacklist.length; i++) {
-            const regex = new RegExp(blacklist[i]);
+            const regex = new RegExp(escapeRegExp(blacklist[i]));
 
             if (regex.test(url)) {
               return false;
@@ -55,7 +66,7 @@
 
         if (whitelist.length !== 0) {
           for (let j = 0; j < whitelist.length; j++) {
-            const regex = new RegExp(whitelist[j]);
+            const regex = new RegExp(escapeRegExp(whitelist[j]));
 
             if (regex.test(url)) {
               return true;
@@ -72,7 +83,16 @@
         // console.log('setTopicOnLocalStorage', href, hostname, pathname);
 
         const candidateTopics = [];
-        if (urlPosition === 0) {
+        if (topicList.length > 0) {
+          topicList.forEach(x => {
+            const re = topicRegexps[x];
+            if (!re) {
+              console.warn('Missing regular expression for topic', x);
+              return;
+            }
+            if (href.match(re)) candidateTopics.push(x);
+          });
+        } else if (urlPosition === 0) {
           candidateTopics.push(hostname);
         } else {
           const tokens = pathname.split('/');
