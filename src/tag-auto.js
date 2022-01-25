@@ -164,12 +164,14 @@
         const favoriteTopics = await getFavoriteTopics();
 
         const wonderPushTags = await WonderPush.getTags();
+        const tagsToAdd = [];
+        const tagsToRemove = [];
 
         // handle old tags
         for (let tag of wonderPushTags) {
           if (tag.startsWith(tagPrefix)) {
             if (!favoriteTopics.includes(tag.substring(tagPrefix.length))) {
-              await WonderPush.removeTag(tag);
+              tagsToRemove.push(tag);
             }
           }
         }
@@ -177,9 +179,11 @@
         // handle new tags
         favoriteTopics.forEach(topic => {
           if (!wonderPushTags.includes(tagPrefix + topic)) {
-            WonderPush.addTag(tagPrefix + topic);
+            tagsToAdd.push(tagPrefix + topic);
           }
         });
+
+        WonderPush.addRemoveTags(tagsToAdd, tagsToRemove);
 
         // FIXME: don't check me in
         // console.log('handleWonderPushTags', await WonderPush.getTags());
