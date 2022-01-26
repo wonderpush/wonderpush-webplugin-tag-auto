@@ -40,14 +40,25 @@
       const tagPrefix = options.tagPrefix || "topic:";
       const topicList = Array.from(new Set(options.topicList || []));
       const escapeRegExp = (s) => (s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const normalize = (str) => {
+        let result = str.normalize ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : str;
+        result = result.toLowerCase();
+        result = result.replace(/[^a-z0-9]+/g, ' ');
+        result = result.trim();
+        return result.replace(/\s+/g, '-');
+      };
       const regExpFromTopic = (topic) => {
-        const escapedTopic = escapeRegExp(topic);
+        const escapedTopic = escapeRegExp(normalize(topic));
         // Match escaped topics surrounded by non alphanum characters or nothing
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions/Assertions#other_assertions
         return new RegExp('(?<![a-z0-9])' + escapedTopic + '(?![a-z0-9])', 'i');
       };
       const topicRegexps = {};
       topicList.forEach(x => topicRegexps[x] = regExpFromTopic(x));
+
+      // FIXME: don't check me in
+      // console.log('topicList', topicList)
+
 
       const isCandidateUrl = url => {
         if (blacklist.length !== 0) {
@@ -77,20 +88,48 @@
         return true;
       };
 
-      const setTopicOnLocalStorage = async (href, hostname, pathname) => {
+      const extractTopics = async () => {
+        const href = window.location.href; // * https://wp.la440.com/2021/12/03/uncategorized/hello-world/
+        const hostname = window.location.hostname; // * wp.la440.com
+        const pathname = window.location.pathname; // * /2021/12/03/uncategorized/hello-world/
+
 
         // FIXME: don't check me in
-        // console.log('setTopicOnLocalStorage', href, hostname, pathname);
+        // console.log('extractTopics', href, hostname, pathname);
 
-        const candidateTopics = [];
+        let candidateTopics = [];
         if (topicList.length > 0) {
+          // Page title and URL
+          const contentSources = [
+            normalize(href),
+          ];
+          // Title
+          const title = normalize(document.title);
+          if (title) contentSources.push(title);
+            // H1
+          const h1 = document.querySelector('h1');
+          if (h1 && h1.textContent) contentSources.push(h1.textContent);
+          // Opengraph metas
+          const metaNames = ['og:title', 'og:description', 'twitter:title', 'twitter:description'];
+          if (document.head) {
+            metaNames.forEach(metaName => {
+              const elt = document.head.querySelector('meta[name="'+metaName+'"]');
+              const content = elt ? elt.getAttribute('content') : null;
+              const normalized = content ? normalize(content) : null;
+              if (normalized) contentSources.push(normalized);
+            });
+          }
+
+          // FIXME: don't check me in
+          // console.log('contentSources', contentSources);
+
           topicList.forEach(x => {
             const re = topicRegexps[x];
             if (!re) {
               console.warn('Missing regular expression for topic', x);
               return;
             }
-            if (href.match(re)) candidateTopics.push(x);
+            for (const content of contentSources) if (content.match(re)) candidateTopics.push(x);
           });
         } else if (urlPosition === 0) {
           candidateTopics.push(hostname);
@@ -112,6 +151,9 @@
           }
         }
 
+        // Dedup
+        candidateTopics = Array.from(new Set(candidateTopics));
+
         // Store viewed topics in the localstorage
         if (isCandidateUrl(href) && candidateTopics.length) {
           let viewsByTopic = {};
@@ -120,6 +162,7 @@
             viewsByTopic = indexedData.viewsByTopic;
           }
           const currentTimestamp = new Date().getTime();
+          // iterate
           candidateTopics.forEach((candidateTopic) => {
             // Store the view's timestamp
             if (Object.keys(viewsByTopic).includes(candidateTopic)) {
@@ -206,7 +249,7 @@
         WonderPush.addRemoveTags(tagsToAdd, tagsToRemove);
 
         // FIXME: don't check me in
-        // console.log('handleWonderPushTags', await WonderPush.getTags());
+        // console.log('tagsToAdd', tagsToAdd, 'tagsToRemove', tagsToRemove);
       };
 
       const handleAutotag = async () => {
@@ -214,11 +257,7 @@
         // FIXME: don't check me in
         // console.log('handleAutotag');
 
-        const href = window.location.href; // * https://wp.la440.com/2021/12/03/uncategorized/hello-world/
-        const hostname = window.location.hostname; // * wp.la440.com
-        const pathname = window.location.pathname; // * /2021/12/03/uncategorized/hello-world/
-
-        await setTopicOnLocalStorage(href, hostname, pathname);
+        await extractTopics();
         await handleWonderPushTags();
       };
 
