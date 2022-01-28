@@ -51,7 +51,7 @@
         const escapedTopic = escapeRegExp(normalize(topic));
         // Match escaped topics surrounded by non alphanum characters or nothing
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions/Assertions#other_assertions
-        return new RegExp('(?<![a-z0-9])' + escapedTopic + '(?![a-z0-9])', 'i');
+        return new RegExp("(^|[^a-z0-9])" + escapedTopic + "([^a-z0-9]|$)", 'i');
       };
       const topicRegexps = {};
       topicList.forEach(x => topicRegexps[x] = regExpFromTopic(x));
