@@ -273,7 +273,7 @@
       if (window.document.readyState === 'complete') {
         handleAutotag();
       } else {
-        window.addEventListener("load", handleAutotag());
+        window.addEventListener("load", handleAutotag);
       }
     }
   });
