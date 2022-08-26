@@ -1,6 +1,6 @@
 {
   "name": "wonderpush-webplugin-tag-auto",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "WonderPush Web SDK plugin for E-commerce lets you integrate your E-commerce website seamlessly with WonderPush.",
   "main": "src/tag-auto.js",
   "repository": {
